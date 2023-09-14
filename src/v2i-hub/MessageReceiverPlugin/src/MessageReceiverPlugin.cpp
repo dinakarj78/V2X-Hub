@@ -42,12 +42,14 @@ void MessageReceiverPlugin::Log(uint32_t VehicleID,uint32_t latitude,uint32_t lo
         if (!logFile.is_open()) {
             std::cerr << "Error opening log file." << std::endl;
         }
-		if (logFile.is_open()) {
+        if (logFile.is_open()) {
 			    logFile<<VehicleID<<endl;
 				logFile<<"Latitude:"<< latitude;
 				logFile<<"Longitude"<<longitude;
 				PLOG(logINFO) << "vehicleId: " << VehicleID;
+		logfile.close()
         }
+
 }
 
 void MessageReceiverPlugin::getmessageid()
