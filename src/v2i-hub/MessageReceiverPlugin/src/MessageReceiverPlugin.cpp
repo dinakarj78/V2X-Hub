@@ -38,7 +38,7 @@ void MessageReceiverPlugin::Log(uint32_t VehicleID,uint32_t latitude,uint32_t lo
     static string logmessage; 
     static std::ofstream logFile;
 
-      logFile.open("log.txt", std::ios::app); // You can replace "log.txt" with your desired log file path.
+      logFile.open("log.txt", std::ios::app); 
         if (!logFile.is_open()) {
             std::cerr << "Error opening log file." << std::endl;
         }
