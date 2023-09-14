@@ -4,9 +4,9 @@
  *  Created on: May 10, 2016
  *      Author: ivp
  */
-
+ 
 #include "MessageReceiverPlugin.h"
-
+#include <fstream>
 
 #define ABBR_BSM 1000
 #define ABBR_SRM 2000
@@ -32,6 +32,22 @@ MessageReceiverPlugin::MessageReceiverPlugin(std::string name): TmxMessageManage
 {	
 	errThrottle.set_Frequency(std::chrono::milliseconds(ERROR_WAIT_MS));
 	statThrottle.set_Frequency(std::chrono::milliseconds(STATUS_WAIT_MS));
+} 
+
+void MessageReceiverPlugin::Log(uint32_t VehicleID,uint32_t latitude,uint32_t longitude ){
+    static string logmessage; 
+    static std::ofstream logFile;
+
+      logFile.open("log.txt", std::ios::app); // You can replace "log.txt" with your desired log file path.
+        if (!logFile.is_open()) {
+            std::cerr << "Error opening log file." << std::endl;
+        }
+		if (logFile.is_open()) {
+			    logFile<<VehicleID<<endl;
+				logFile<<"Latitude:"<< latitude;
+				logFile<<"Longitude"<<longitude;
+				PLOG(logINFO) << "vehicleId: " << VehicleID;
+        }
 }
 
 void MessageReceiverPlugin::getmessageid()
@@ -74,9 +90,8 @@ BsmMessage* MessageReceiverPlugin::DecodeBsm(uint32_t vehicleId, uint32_t headin
 			<< ", latitude: " << latitude
 			<< ", longitude: " << longitude
 			<< ", elevation: " << elevation<< " \n";
-
+Log(vehicleId,latitude,longitude);
 	//send BSM
-
 	// Set the temp ID
 	decodedBsm.set_TemporaryId(vehicleId);
 
@@ -392,6 +407,8 @@ int MessageReceiverPlugin::Main()
 
 	byte_stream extractedpayload(4000);
 	int mlen=0;
+
+
 
 	while (_plugin->state != IvpPluginState_error)
 	{
