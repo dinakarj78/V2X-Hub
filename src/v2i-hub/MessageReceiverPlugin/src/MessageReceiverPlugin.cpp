@@ -34,22 +34,30 @@ MessageReceiverPlugin::MessageReceiverPlugin(std::string name): TmxMessageManage
 	statThrottle.set_Frequency(std::chrono::milliseconds(STATUS_WAIT_MS));
 } 
 
-void MessageReceiverPlugin::Log(uint32_t VehicleID,uint32_t latitude,uint32_t longitude ){
+void MessageReceiverPlugin::Log(routeable_message &msg){
     static string logmessage; 
-    static std::ofstream logFile;
+	std::string logFile = "LogFile.txt";
+    static std::ofstream outputFile(logFile);
 
-      logFile.open("log.txt", std::ios::app); 
-        if (!logFile.is_open()) {
+      outputFile.open("log.txt", std::ios::app); // You can replace "log.txt" with your desired log file path.
+        if (!outputFile.is_open()) {
             std::cerr << "Error opening log file." << std::endl;
         }
-        if (logFile.is_open()) {
-			    logFile<<VehicleID<<endl;
-				logFile<<"Latitude:"<< latitude;
-				logFile<<"Longitude"<<longitude;
-				PLOG(logINFO) << "vehicleId: " << VehicleID;
-		logfile.close()
-        }
+		if (outputFile.is_open()) {
+				byte_stream bytes; 
+	            DecodedBsmMessage decodedBsm;
+			   BsmMessage *bsm = DecodeBsm(ntohl(*((uint32_t*)&(bytes.data()[8]))),
+										ntohl(*((uint32_t*)&(bytes.data()[12]))),
+										ntohl(*((uint32_t*)&(bytes.data()[16]))),
+										ntohl(*((uint32_t*)&(bytes.data()[20]))),
+										ntohl(*((uint32_t*)&(bytes.data()[24]))),
+										ntohl(*((uint32_t*)&(bytes.data()[28]))),
+										decodedBsm);
+            outputFile<<decodedBsm.get_Speed_kph();
+			outputFile<<decodedBsm.get_MsgCount();
+			outputFile.close();
 
+        }
 }
 
 void MessageReceiverPlugin::getmessageid()
@@ -92,7 +100,6 @@ BsmMessage* MessageReceiverPlugin::DecodeBsm(uint32_t vehicleId, uint32_t headin
 			<< ", latitude: " << latitude
 			<< ", longitude: " << longitude
 			<< ", elevation: " << elevation<< " \n";
-Log(vehicleId,latitude,longitude);
 	//send BSM
 	// Set the temp ID
 	decodedBsm.set_TemporaryId(vehicleId);
@@ -143,7 +150,7 @@ SrmMessage* MessageReceiverPlugin::DecodeSrm(uint32_t vehicleId, uint32_t headin
 		srm->requestor.id.choice.entityID.size = s;
 		srm->requestor.id.choice.entityID.buf = (uint8_t *)calloc(s, sizeof(uint8_t));
 		if (srm->requestor.id.choice.entityID.buf)
-			memcpy(srm->requestor.id.choice.entityID.buf, &vehicleId, s);
+			memcpy(srm->requestor.id.oice.entityID.buf, &vehicleId, s);
 
 		srm->requestor.type =
 				(struct RequestorType *)calloc(1, sizeof(struct RequestorType));
@@ -190,13 +197,14 @@ void MessageReceiverPlugin::OnMessageReceived(routeable_message &msg)
 		if (msg.get_encoding() == api::ENCODING_JSON_STRING)
 		{
 			// Check to see if the payload is a routable message
-
+           
 			message payloadMsg = msg.get_payload<message>();
 			if (payloadMsg.get_untyped("header.type", "Unknown") != "Unknown")
 			{
 				msg.clear();
 				msg.set_contents(payloadMsg.get_container());
 				msg.reinit();
+				Log(msg);
 			}
 		}
 		else if (msg.get_encoding() == api::ENCODING_BYTEARRAY_STRING)
@@ -251,6 +259,7 @@ void MessageReceiverPlugin::OnMessageReceived(routeable_message &msg)
 						{
 						case ABBR_BSM:
 							if (bytes.size() >= 32 && dataLength >= 24)
+							
 							{
 								if (!simBSM && !simLoc) return;
 
@@ -403,7 +412,6 @@ void MessageReceiverPlugin::OnStateChange(IvpPluginState state)
 int MessageReceiverPlugin::Main()
 {
 	PLOG(logINFO) << "Starting plugin.";
-
 	byte_stream incoming(4000);
 	std::unique_ptr<tmx::utils::UdpServer> server;
 
